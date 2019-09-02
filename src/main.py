@@ -7,10 +7,16 @@ const_coulomb = 9000000000
 # Define some colors
 preto = (0, 0, 0)
 branco = (255, 255, 255)
- 
-SCREEN_WIDTH = 700
-SCREEN_HEIGHT = 500
-tamanho_carga = 25
+marron = (165,42,42)
+
+largura_tela = 800
+altura_tela = 800
+centroX = largura_tela/2
+centroY = altura_tela/2
+
+
+
+tamanho_carga = 12
 
 class Ball:
     """
@@ -26,9 +32,9 @@ class Ball:
 def get_new_carga(nome, position_x, position_y, valor_carga):
     new_carga = collections.OrderedDict()
     new_carga['nome'] = nome
-    new_carga['position_x'] = position_x
-    new_carga['position_y'] = position_y
-    new_carga['valor_carga'] = valor_carga
+    new_carga['position_x'] = int(position_x)
+    new_carga['position_y'] = int(position_y)
+    new_carga['valor_carga'] = float(valor_carga)
     new_carga['forcas'] = []
     return new_carga
 
@@ -41,19 +47,20 @@ def get_new_forca(carga1, carga2, forca):
     return new_forca
 
 
+def get_new_campo(carga, campo):
+    new_forca = collections.OrderedDict()
+    new_forca['carga'] = carga
+    new_forca['campo'] = campo
+    return new_forca
+
+
 def calcula_distancia(carga_1, carga_2):
-    distancia_x = carga_1['position_x'] - carga_2['position_x']
-    distancia_y = carga_1['position_y'] - carga_2['position_y']
+    distancia_x = (carga_1['position_x'] - carga_2['position_x'])/1000
+    distancia_y = (carga_1['position_y'] - carga_2['position_y'])/1000
     distancia_x = math.pow(distancia_x, 2)
     distancia_y = math.pow(distancia_y, 2)
     distancia = math.sqrt(distancia_x+distancia_y)
     return distancia
-
-
-def calcula_forca(carga1, ponto):
-    dividendo = const_coulomb * carga1['valor_carga']
-    divisor = math.pow(calcula_distancia(carga1, ponto), 2)
-    return (dividendo/divisor)
 
 
 def calcula_forca_2cargas(carga_1, carga_2):
@@ -73,9 +80,15 @@ def forcas_atuantes(bola, lista_bolas):
 
 def calcula_campo_eletrico(carga1, pontox, pontoy):
     ponto = collections.OrderedDict()
+
     ponto['position_x'] = pontox
     ponto['position_y'] = pontoy
-    return (calcula_forca(carga1, ponto)/carga1['valor_carga'])
+    
+    divisor = calcula_distancia(carga1, ponto)
+    divisor = math.pow(divisor, 2)
+
+    dividendo = const_coulomb * carga1['valor_carga']
+    return (dividendo / divisor)
 
 
 def fazer_bola_carga(carga):
@@ -83,40 +96,43 @@ def fazer_bola_carga(carga):
     Cria a bola 
     """
     bola = Ball(carga)
-    # Starting position of the ball.
-    # Take into account the ball size so we don't spawn on the edge.
+
     # Local onde é colocado o local de onde a bola começa
-    bola.x = random.randrange(tamanho_carga, SCREEN_WIDTH - tamanho_carga)
-    bola.y = random.randrange(tamanho_carga, SCREEN_HEIGHT - tamanho_carga)
+    # Como os pixeis começam a ser contados no canto superior esquerdo
+    #   Essa função converte o valor, x ou y, para a posição do pixel 
+    bola.x = int(centroX) +carga['position_x']
+    bola.y = int(centroY) + (carga['position_y'] * (-1))
  
-    # Speed and direction of rectangle
-    bola.change_x = random.randrange(-2, 3)
-    bola.change_y = random.randrange(-2, 3)
  
     return bola
 
 
-def adiciona_nova_bola():
-    posicaox, posicaoy, carga
-    input_box = pygame.Rect(100, 100, 140, 32)
-    if input_box.collidepoint(event.pos):
-        # Toggle the active variable.
-        active = not active
-    else:
-        active = False
-    ball = fazer_bola_carga(get_new_carga(f"q{x}",posicaox, posicaoy, random.uniform(0.000001, 0.00001)))
-    
+def adiciona_nova_bola(qtd_itens):
+    valor = input("Digite o valor da carga em Coulomb: ")
+    print("Digite o local em valores inteiros correspondentes em mm de -400 a 400")
+    posicaox = input("Digite x:")
+    posicaoy = input("Digite y:")
+    # Conversão de metros para centimetro, cada pixel tem 1cm
+    ball = fazer_bola_carga(get_new_carga(f"q{qtd_itens}",int(posicaox), int(posicaoy), valor))
+    return ball
+
+
+def get_campos_eletricos(ball_list, pontox, pontoy):
+    lista_campos = []
+    for ball in ball_list:
+        campo = get_new_campo(ball.carga['nome'], calcula_campo_eletrico(ball.carga, pontox, pontoy))
+        lista_campos.append(campo)
+    return lista_campos
 
 
 if __name__ == "__main__":
     pygame.init()
-    size = [SCREEN_WIDTH, SCREEN_HEIGHT]
+    size = [largura_tela, altura_tela]
     screen = pygame.display.set_mode(size)
-
-    pygame.display.set_caption("Clique para adicionar cargas")
+    
+    pygame.display.set_caption("Calcule forças e campo elétrico")
     clock = pygame.time.Clock()
  
-    # Loop until the user clicks the close button.
     done = False
 
     ball_list = []
@@ -125,47 +141,49 @@ if __name__ == "__main__":
     #     ball = fazer_bola_carga(get_new_carga(f"q{x}",random.uniform(-1.5, 1.5), random.uniform(-1.2, 1.2), random.uniform(0.000001, 0.00001)))
     #     ball_list.append(ball)
         #lista_cargas.append(get_new_carga(f"q{x}",random.uniform(-1.5, 1.5), random.uniform(-1.2, 1.2), random.uniform(0.000001, 0.00001)))
-    
-
+    print("\nBem-vindo, comandos:\nn para nova carga\nf para mostrar as forças")
+    print("\nClique com o mouse em algum ponto da tela para mostrar os campos\n\n")
     # -------- Main Program Loop -----------
     while not done:
         # --- Event Processing
-
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 done = True
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_n:
-
-                    ball_list.append(ball)
+                    print("\n########################")
+                    print("Você clicou em 'n'")
+                    ball_list.append(adiciona_nova_bola(len(ball_list)))
                     for bola in ball_list:
                         bola.carga['forcas'] = [a for a in forcas_atuantes(bola, ball_list)]
-
+                if event.key == pygame.K_f:
+                    print("\n########################")
+                    print("Você clicou em 'f'")
+                    for ball in ball_list:
+                        for forca in ball.carga['forcas']:
+                            print(f"\nForça entre {forca['carga1']} e {forca['carga2']}")
+                            print(f"\nCarga {forca['forca']} N")
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 pos = pygame.mouse.get_pos()
                 x = pos[0]
                 y = pos[1]
-                print(f"\nx: {x}\ny: {y}\n")
-                print(event.button)
+                pygame.draw.circle(screen, marron, [x, y], tamanho_carga)
+                # Conversao para calcular e printar o ponto
+                x = x - int(centroX)
+                y = int(centroY) + (y * (-1))
+                print("\n########################")
+                print(f"\nNo ponto x={x} e y={y}")
+                for campo in get_campos_eletricos(ball_list, x, y):
+                    print(f"\nCampo gerado pela carga {campo['carga']}")
+                    print(f"Valor: {campo['campo']} N/C")
 
-                
  
-        # --- Logic
-        for ball in ball_list:
-            # Move the ball's center
-            ball.x += ball.change_x
-            ball.y += ball.change_y
- 
-            # Bounce the ball if needed
-            if ball.y > SCREEN_HEIGHT - tamanho_carga or ball.y < tamanho_carga:
-                ball.change_y *= -1
-            if ball.x > SCREEN_WIDTH - tamanho_carga or ball.x < tamanho_carga:
-                ball.change_x *= -1
- 
-        # --- Drawing
-        # Set the screen background
+        # Fundo preto
         screen.fill(preto)
- 
+        # Linha do X
+        pygame.draw.line(screen, marron, [0, centroY], [largura_tela, centroY])
+        # Linha do Y
+        pygame.draw.line(screen, marron, [centroX, 0], [centroX, altura_tela])
         # Draw the balls
         for ball in ball_list:
             pygame.draw.circle(screen, branco, [ball.x, ball.y], tamanho_carga)
